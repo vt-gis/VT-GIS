@@ -3,6 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base id="app-base" href="/">
+  <script>
+    (function () {
+      var path = window.location.pathname;
+      var base = "/";
+      if (path.indexOf("/VT-GIS") === 0) {
+        base = "/VT-GIS/";
+      } else if (path.lastIndexOf("/") >= 0) {
+        base = path.substring(0, path.lastIndexOf("/") + 1);
+      }
+      document.getElementById("app-base").href = base;
+    })();
+  </script>
   <title>VT GIS — WebGIS</title>
   <link rel="icon" href="assets/logo.png?v=2" type="image/png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -25,6 +38,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
           crossorigin=""></script>
-  <script src="js/app.js?v=7"></script>
+  <script src="js/app.js?v=8"></script>
 </body>
 </html>
