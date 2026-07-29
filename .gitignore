@@ -1,0 +1,26 @@
+# GeoJSON originais (muito grandes para o GitHub)
+geojason/CAR_SC.geojson
+geojason/Municipios_SC.geojson
+geojason/*.qmd
+
+# Versões web não usadas pelo mapa
+geojason/_web/CAR_SC.geojson
+geojason/_web/Municipios_SC.js
+
+# Dados fonte locais (shapefile, QGIS, etc.)
+*.zip
+*.qgz
+AREA_IMOVEL/
+SC_Municipios_2025/
+BR_Pais_2025/
+BR_UF_2025/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# SO / editor
+.DS_Store
+Thumbs.db
+*.swp
