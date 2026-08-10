@@ -645,4 +645,9 @@
 
   map._setBasemap(basemaps[0]);
   updateCoords();
+
+  if (window.VTMapTools && window.VTInitCrm) {
+    var mapTools = new window.VTMapTools(map);
+    window.VTInitCrm(map, mapTools);
+  }
 })();

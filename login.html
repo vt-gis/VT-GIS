@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base id="app-base" href="/">
+  <script>
+    (function () {
+      var path = window.location.pathname;
+      var base = "/";
+      if (path.indexOf("/VT-GIS") === 0) {
+        base = "/VT-GIS/";
+      } else if (path.lastIndexOf("/") >= 0) {
+        base = path.substring(0, path.lastIndexOf("/") + 1);
+      }
+      document.getElementById("app-base").href = base;
+    })();
+  </script>
+  <title>VT GIS — Acesso</title>
+  <link rel="icon" href="assets/logo.png?v=2" type="image/png">
+  <link rel="stylesheet" href="css/style.css?v=14">
+  <link rel="stylesheet" href="css/login.css?v=1">
+  <script src="js/auth.js?v=1"></script>
+  <script>VTAuth.redirectIfAuthenticated();</script>
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <div class="login-card__head">
+      <img src="assets/logo.png?v=2" alt="VT GIS" class="login-card__logo">
+      <h1 class="login-card__title">VT GIS</h1>
+      <p class="login-card__subtitle">Acesso restrito ao sistema de geoprocessamento.<br>Identifique-se para continuar.</p>
+    </div>
+
+    <form id="login-form" class="login-form" autocomplete="on">
+      <div id="login-error" class="login-form__error" hidden></div>
+
+      <label class="field">
+        <span class="field__label">Usuário</span>
+        <input type="text" id="login-user" name="username" placeholder="Digite seu usuário" autocomplete="username" required autofocus>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Senha</span>
+        <input type="password" id="login-pass" name="password" placeholder="Digite sua senha" autocomplete="current-password" required>
+      </label>
+
+      <button type="submit" id="login-submit" class="login-form__submit">Entrar</button>
+    </form>
+
+    <div class="login-card__footer">
+      <p class="login-card__notice">
+        Acesso protegido em conformidade com a LGPD. Não compartilhe suas credenciais.
+        A sessão expira automaticamente após 8 horas de inatividade.
+      </p>
+    </div>
+  </div>
+
+  <script src="js/login.js?v=1"></script>
+</body>
+</html>

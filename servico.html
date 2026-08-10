@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base id="app-base" href="/">
+  <script>
+    (function () {
+      var path = window.location.pathname;
+      var base = "/";
+      if (path.indexOf("/VT-GIS") === 0) {
+        base = "/VT-GIS/";
+      } else if (path.lastIndexOf("/") >= 0) {
+        base = path.substring(0, path.lastIndexOf("/") + 1);
+      }
+      document.getElementById("app-base").href = base;
+    })();
+  </script>
+  <title>VT GIS — Serviço</title>
+  <link rel="icon" href="assets/logo.png?v=2" type="image/png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="">
+  <link rel="stylesheet" href="css/style.css?v=14">
+  <link rel="stylesheet" href="css/servico.css?v=34">
+  <script src="js/auth.js?v=1"></script>
+  <script>VTAuth.requireAuth();</script>
+</head>
+<body class="servico-page">
+  <header class="header header--auth">
+    <a href="index.html" class="header__brand">
+      <div class="header__logo-wrap">
+        <img src="assets/logo.png?v=2" alt="VT GIS" class="header__logo">
+      </div>
+      <span class="header__title">VT GIS</span>
+    </a>
+    <button type="button" id="btn-logout" class="header__logout">Sair</button>
+  </header>
+
+  <div class="servico-workspace">
+    <div class="servico-toolbar map-toolbar">
+      <div class="map-toolbar__filters">
+        <select id="toolbar-client" class="map-toolbar__select" aria-label="Cliente">
+          <option value="">Todos os clientes</option>
+        </select>
+        <select id="toolbar-service" class="map-toolbar__select" aria-label="Serviço">
+        </select>
+        <a href="index.html" id="btn-new-service" class="map-toolbar__btn">+ Novo Serviço</a>
+      </div>
+      <div class="map-toolbar__search">
+        <svg class="map-toolbar__search-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="search" id="map-search" class="map-toolbar__search-input" placeholder="Buscar imóvel, endereço, lugar, código CAR/SNCR, coordenada ou link do Maps" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="servico-body">
+      <nav class="servico-rail" aria-label="Seções do serviço">
+        <button type="button" class="servico-rail__item is-active" data-section="dados" title="Dados">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M5 6v12c0 1.66 3.13 3 7 3s7-1.34 7-3V6"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M5 12c0 1.66 3.13 3 7 3s7-1.34 7-3"/></svg>
+          <span>Dados</span>
+        </button>
+        <button type="button" class="servico-rail__item" data-section="desenho" title="Desenho">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 20l4-1 9-9-3-3-9 9-1 4z"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M13 5l3 3"/></svg>
+          <span>Desenho</span>
+        </button>
+        <button type="button" class="servico-rail__item" data-section="limites" title="Limites">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M12 3l7 4v10l-7 4-7-4V7z"/></svg>
+          <span>Limites</span>
+        </button>
+        <button type="button" class="servico-rail__item" data-section="entregas" title="Entregas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M4 7h16v10H4z"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M4 11h16M8 7V5h8v2"/></svg>
+          <span>Entregas</span>
+        </button>
+      </nav>
+
+      <aside class="servico-panel" id="servico-panel">
+        <div class="servico-panel__head">
+          <div class="servico-panel__meta">
+            <span id="service-code" class="servico-panel__code">SRV-0000</span>
+            <span class="servico-panel__badge">Serviço</span>
+          </div>
+          <div class="servico-panel__actions">
+            <button type="button" class="servico-panel__icon-btn" title="Opções" aria-label="Opções">&#8942;</button>
+            <a href="index.html" class="servico-panel__icon-btn" title="Fechar" aria-label="Fechar">&times;</a>
+          </div>
+        </div>
+        <h1 id="service-name" class="servico-panel__title">—</h1>
+        <p class="servico-panel__client">Cliente: <span id="service-client">—</span></p>
+
+        <div class="servico-panel__section-head">
+          <h2 id="section-title" class="servico-panel__section-title">Dados</h2>
+          <p id="section-desc" class="servico-panel__section-desc">Pontos, arquivos e documentos de entrada do serviço.</p>
+        </div>
+
+        <div class="servico-accordions" id="section-dados">
+          <details class="servico-accordion" open>
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+              </span>
+              <span>Grupos de pontos</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <div class="point-group-models">
+                <span class="point-group-models__label">Modelos:</span>
+                <span class="point-group-models__tag">CSV</span>
+                <span class="point-group-models__tag">TXT</span>
+                <span class="point-group-models__tag">Códigos</span>
+              </div>
+
+              <div class="point-group-import">
+                <p class="point-group-import__title">Novo grupo de pontos</p>
+
+                <label class="point-group-upload" id="point-group-upload">
+                  <input type="file" id="point-group-file" accept=".csv,.txt" hidden>
+                  <svg class="point-group-upload__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M4 18v2h16v-2"/>
+                  </svg>
+                  <span class="point-group-upload__text" id="point-group-file-label">Selecionar arquivo (.txt, .csv)</span>
+                </label>
+
+                <label class="field point-group-field">
+                  <input type="text" id="point-group-name" placeholder="Nome do grupo">
+                </label>
+
+                <label class="field point-group-field point-group-field--fuso">
+                  <span class="field__label">Fuso</span>
+                  <input type="text" id="point-group-fuso" placeholder="22" inputmode="numeric" maxlength="2">
+                </label>
+
+                <div class="point-group-import__actions">
+                  <button type="button" id="point-group-cancel" class="btn btn--ghost">Cancelar</button>
+                  <button type="button" id="point-group-import" class="btn btn--primary">Importar</button>
+                </div>
+              </div>
+
+              <div id="point-group-list" class="point-group-list" hidden></div>
+            </div>
+          </details>
+          <details class="servico-accordion">
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M12 3l7 4v10l-7 4-7-4V7z"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M9.5 12l1.8 1.8L15 10"/></svg>
+              </span>
+              <span>Áreas certificadas (SIGEF)</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <p class="sigef-search__desc">
+                Busca parcelas já georreferenciadas no INCRA ao redor da sua área — a partir do perímetro,
+                do grupo de pontos ou das polilinhas já carregados. Clique numa no mapa para importar o
+                memorial do vizinho — os marcos certificados são adotados automaticamente (snap).
+              </p>
+              <button type="button" id="sigef-search-btn" class="sigef-search__btn">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                  <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+                </svg>
+                Buscar áreas certificadas ao redor
+              </button>
+              <div id="sigef-search-status" class="sigef-search__status" hidden></div>
+            </div>
+          </details>
+          <details class="servico-accordion">
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" d="M7 4h10v16H7z"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M9 8h6M9 12h6M9 16h4"/></svg>
+              </span>
+              <span>Documentos</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <p class="doc-attach__desc">
+                Escritura, matrícula, croqui, histórico e outros arquivos do cliente/cartório.
+              </p>
+
+              <button type="button" id="doc-attach-toggle" class="doc-attach__btn">
+                <span class="doc-attach__plus" aria-hidden="true">+</span>
+                Anexar documento
+              </button>
+
+              <div id="doc-attach-form" class="doc-attach-form" hidden>
+                <label class="doc-attach-upload" id="doc-upload-label">
+                  <input type="file" id="doc-attach-file" hidden accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt,.csv">
+                  <svg class="doc-attach-upload__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M4 18v2h16v-2"/>
+                  </svg>
+                  <span class="doc-attach-upload__text" id="doc-file-label">Selecionar arquivo (PDF, Word, imagem…)</span>
+                </label>
+
+                <label class="field point-group-field">
+                  <input type="text" id="doc-attach-name" placeholder="Nome (opcional — usa o nome do arquivo)">
+                </label>
+
+                <div class="doc-attach-form__actions">
+                  <button type="button" id="doc-attach-cancel" class="btn btn--ghost">Cancelar</button>
+                  <button type="button" id="doc-attach-submit" class="btn btn--primary">Anexar</button>
+                </div>
+              </div>
+
+              <div id="doc-list" class="doc-list"></div>
+            </div>
+          </details>
+        </div>
+
+        <div class="servico-accordions" id="section-desenho" hidden>
+          <details class="servico-accordion">
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 20l4-1 9-9-3-3-9 9-1 4z"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M13 5l3 3"/></svg>
+              </span>
+              <span>Barra de Desenho</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <button type="button" id="open-draw-tools" class="draw-tools-btn">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 20l4-1 9-9-3-3-9 9-1 4z"/><path d="M13 5l3 3"/>
+                </svg>
+                Abrir ferramentas de desenho
+              </button>
+            </div>
+          </details>
+          <details class="servico-accordion">
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M4 14c2-2 4-2 6 0s4 2 6 0"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M4 10c2-2 4-2 6 0s4 2 6 0"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M4 6c2-2 4-2 6 0s4 2 6 0"/></svg>
+              </span>
+              <span>Curvas de nível</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <p class="contour-accordion__desc">Superfície (triangulação) e curvas a partir dos pontos. As polilinhas do desenho entram como linhas obrigatórias.</p>
+              <button type="button" id="open-contour-tools" class="draw-tools-btn">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                  <path d="M4 14c2-2 4-2 6 0s4 2 6 0"/><path d="M4 10c2-2 4-2 6 0s4 2 6 0"/><path d="M4 6c2-2 4-2 6 0s4 2 6 0"/>
+                </svg>
+                Abrir ferramentas de curvas
+              </button>
+              <div id="contour-bar-status" class="contour-bar-status" hidden>
+                <span>Barra de curvas aberta — no topo do mapa.</span>
+                <button type="button" id="contour-bar-status-close" class="contour-bar-status__close">Fechar</button>
+              </div>
+            </div>
+          </details>
+        </div>
+        <div class="servico-accordions" id="section-limites" hidden>
+          <details class="servico-accordion servico-accordion--perimeters" open>
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M12 3l7 4v10l-7 4-7-4V7z"/></svg>
+              </span>
+              <span>Perímetros</span>
+              <button type="button" id="perimeter-toggle-visible" class="perimeter-vis-btn is-on" title="Mostrar/ocultar perímetros no mapa" aria-label="Mostrar ou ocultar perímetros no mapa" aria-pressed="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <div id="perimeter-empty" class="perimeter-empty">
+                <svg class="perimeter-empty__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l7 4v10l-7 4-7-4V7z"/></svg>
+                <p class="perimeter-empty__title">Nenhum perímetro ainda</p>
+                <p class="perimeter-empty__desc">Desenhe o contorno no mapa ou importe um arquivo (SHP, DWG, DXF, KML, KMZ). Você pode criar vários perímetros (gleba vendida, restante, etc.).</p>
+              </div>
+
+              <div id="perimeter-list" class="perimeter-list" hidden></div>
+
+              <div class="perimeter-new-wrap">
+                <button type="button" id="perimeter-new-btn" class="perimeter-new-btn" aria-haspopup="menu" aria-expanded="false">
+                  <span>+ Novo perímetro</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div id="perimeter-new-menu" class="perimeter-new-menu" hidden role="menu">
+                  <button type="button" class="perimeter-new-menu__item" data-perimeter-action="draw" role="menuitem">
+                    Desenhar no mapa
+                  </button>
+                  <button type="button" class="perimeter-new-menu__item" data-perimeter-action="import" role="menuitem">
+                    Importar arquivo…
+                  </button>
+                </div>
+                <input type="file" id="perimeter-file-input" accept=".shp,.zip,.dwg,.dxf,.kml,.kmz" hidden>
+              </div>
+            </div>
+          </details>
+        </div>
+        <div class="servico-accordions" id="section-entregas" hidden>
+          <details class="servico-accordion servico-accordion--entregas servico-accordion--carimbo" open>
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M4 7h16v10H4z"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M4 11h16M8 7V5h8v2"/></svg>
+              </span>
+              <span class="servico-accordion__label-wrap">
+                <span class="servico-accordion__label">Emissão (carimbo)</span>
+                <span id="entregas-carimbo-definido" class="entregas-carimbo-status" hidden>definido</span>
+              </span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <div class="entregas-carimbo">
+                <div class="entregas-carimbo__top">
+                  <button type="button" id="entregas-carimbo-manage" class="entregas-carimbo__manage">Gerenciar…</button>
+                </div>
+
+                <label class="entregas-field">
+                  <span class="entregas-field__label">Empresa</span>
+                  <select id="entregas-carimbo-empresa" class="entregas-field__control" aria-label="Empresa">
+                    <option value="">— Padrão da conta —</option>
+                  </select>
+                </label>
+
+                <label class="entregas-field">
+                  <span class="entregas-field__label">Responsável técnico</span>
+                  <select id="entregas-carimbo-responsavel" class="entregas-field__control" aria-label="Responsável técnico">
+                    <option value="">— Padrão da conta —</option>
+                  </select>
+                </label>
+              </div>
+
+              <div id="entregas-no-perimeter" class="entregas-empty">
+                <p class="entregas-empty__title">Nenhum perímetro pronto</p>
+                <p class="entregas-empty__desc">
+                  Para plantas com memorial, tabela de vértices e confrontantes, defina e valide perímetros no pilar
+                  <button type="button" class="entregas-link" id="entregas-go-limites">Limites</button>.
+                </p>
+              </div>
+            </div>
+          </details>
+
+          <details class="servico-accordion servico-accordion--entregas">
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M8 6h8v12H8z"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M6 8h2M6 12h2M6 16h2"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M14 6h4v12h-4"/></svg>
+              </span>
+              <span class="servico-accordion__label">Memoriais &amp; documentos</span>
+              <span id="entregas-badge-memoriais" class="entregas-badge" hidden>0</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <p id="entregas-memoriais-empty" class="entregas-panel__empty">Nenhum memorial ou documento de entrega gerado.</p>
+              <div id="entregas-memoriais-list" class="entregas-memoriais-list" hidden></div>
+            </div>
+          </details>
+
+          <details class="servico-accordion servico-accordion--entregas">
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M6 4h9l3 3v13H6z"/><path d="M15 4v4h4"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 11v5M12 8h.01"/></svg>
+              </span>
+              <span class="servico-accordion__label">Prancha (PDF)</span>
+              <span id="entregas-badge-prancha" class="entregas-badge entregas-badge--pill" hidden>0 prontos</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <p class="entregas-panel__empty">Nenhuma prancha PDF pronta para download.</p>
+            </div>
+          </details>
+
+          <details class="servico-accordion servico-accordion--entregas">
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M12 8v4l3 2"/></svg>
+              </span>
+              <span class="servico-accordion__label">Plantas emitidas</span>
+              <span id="entregas-badge-plantas" class="entregas-badge" hidden>0</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <p class="entregas-panel__empty">Nenhuma planta emitida neste serviço.</p>
+            </div>
+          </details>
+
+          <details class="servico-accordion servico-accordion--entregas">
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10.5" r="1.5" fill="currentColor" stroke="none"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M5 16l4-3 3 2 5-5 2 2"/></svg>
+              </span>
+              <span class="servico-accordion__label">Imagens renderizadas</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <p class="entregas-panel__empty">Nenhuma imagem renderizada.</p>
+            </div>
+          </details>
+
+          <details class="servico-accordion servico-accordion--entregas">
+            <summary class="servico-accordion__head">
+              <span class="servico-accordion__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M12 4v10"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M8 14l4 4 4-4"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M5 20h14"/></svg>
+              </span>
+              <span class="servico-accordion__label">Exportações</span>
+              <span class="servico-accordion__chev" aria-hidden="true"></span>
+            </summary>
+            <div class="servico-accordion__body">
+              <p class="entregas-panel__empty">Nenhuma exportação gerada neste serviço.</p>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <main class="servico-map-area">
+        <div id="map"></div>
+
+        <div class="servico-basemap" role="group" aria-label="Tipo de mapa">
+          <button type="button" class="servico-basemap__btn" data-basemap="satellite">Satélite</button>
+          <button type="button" class="servico-basemap__btn is-active" data-basemap="osm">Mapa</button>
+        </div>
+
+        <div class="servico-map-controls">
+          <div class="map-tools servico-map-tools">
+            <button type="button" id="zoom-in" class="map-tools__btn map-tools__btn--zoom" title="Aumentar zoom" aria-label="Aumentar zoom">+</button>
+            <button type="button" id="zoom-out" class="map-tools__btn map-tools__btn--zoom" title="Diminuir zoom" aria-label="Diminuir zoom">−</button>
+            <button type="button" id="tool-measure" class="map-tools__btn" title="Medir distância" aria-label="Medir distância">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5"/><path d="M7.5 16.5l1.3-1.3M10 14l1.3-1.3M12.5 11.5l1.3-1.3M15 9l1.3-1.3"/></svg>
+            </button>
+            <button type="button" id="tool-layers" class="map-tools__btn" title="Camadas" aria-label="Camadas">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 4l8 4.5-8 4.5-8-4.5z"/><path d="M4 12l8 4.5 8-4.5"/><path d="M4 16l8 4.5 8-4.5"/></svg>
+            </button>
+            <button type="button" id="tool-draw-area" class="map-tools__btn" title="Desenhar área" aria-label="Desenhar área">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M8 7l7-2 3 7-6 6-6-5z"/><rect x="6.5" y="5.5" width="3" height="3" fill="currentColor"/><rect x="13.5" y="3.5" width="3" height="3" fill="currentColor"/><rect x="16.5" y="10.5" width="3" height="3" fill="currentColor"/><rect x="10.5" y="16.5" width="3" height="3" fill="currentColor"/><rect x="4.5" y="11.5" width="3" height="3" fill="currentColor"/></svg>
+            </button>
+            <button type="button" id="tool-clear-area" class="map-tools__btn map-tools__btn--clear-area" title="Limpar área desenhada" aria-label="Limpar área desenhada">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M9 6v14h6V6"/></svg>
+            </button>
+          </div>
+
+          <div id="layers-popover" class="servico-layers-popover" hidden>
+            <div id="layers-panel"></div>
+          </div>
+        </div>
+
+        <div id="topo-draw-bar" class="topo-draw-bar" hidden>
+          <label class="topo-draw-bar__crs">
+            <span class="topo-draw-bar__crs-label">SRC</span>
+            <select id="topo-draw-crs" class="topo-draw-bar__crs-select" aria-label="Sistema de referência de coordenadas"></select>
+          </label>
+          <div class="topo-draw-bar__tools" role="toolbar" aria-label="Ferramentas de desenho">
+            <button type="button" class="topo-draw-bar__btn" data-topo-tool="point" title="Ponto" aria-label="Ponto">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
+              <span>Ponto</span>
+            </button>
+            <button type="button" class="topo-draw-bar__btn" data-topo-tool="line" title="Linha" aria-label="Linha">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19L19 5"/></svg>
+              <span>Linha</span>
+            </button>
+            <button type="button" class="topo-draw-bar__btn" data-topo-tool="polygon" title="Polígono" aria-label="Polígono">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M8 7l7-2 3 7-6 6-6-5z"/></svg>
+              <span>Polígono</span>
+            </button>
+            <button type="button" id="topo-draw-snap" class="topo-draw-bar__btn topo-draw-bar__btn--snap" title="Aderência a vértices" aria-label="Aderência" aria-pressed="false">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V5a2 2 0 0 1 4 0v4"/><path d="M14 9V5a2 2 0 0 1 4 0v4"/><path d="M6 9h12v2.5a5.5 5.5 0 0 1-11 0V9z"/></svg>
+              <span>Aderência</span>
+            </button>
+            <button type="button" id="topo-draw-undo" class="topo-draw-bar__btn topo-draw-bar__btn--action" title="Desfazer última feição" aria-label="Desfazer">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H5v4"/><path d="M5 11c1.5-3 4.5-5 8-5 4.4 0 8 3.6 8 8s-3.6 8-8 8a8 8 0 0 1-6.3-3.1"/></svg>
+              <span>Desfazer</span>
+            </button>
+            <button type="button" id="topo-draw-clear" class="topo-draw-bar__btn topo-draw-bar__btn--action" title="Limpar todo o desenho" aria-label="Limpar">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M9 6v14h6V6"/></svg>
+              <span>Limpar</span>
+            </button>
+            <button type="button" class="topo-draw-bar__btn" id="topo-draw-stop" title="Parar desenho" aria-label="Parar desenho">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 8h8v8H8z"/></svg>
+              <span>Parar</span>
+            </button>
+          </div>
+          <button type="button" id="topo-draw-close" class="topo-draw-bar__close" title="Fechar barra" aria-label="Fechar barra">&times;</button>
+        </div>
+
+        <div id="topo-vector-panel" class="topo-vector-panel" hidden>
+          <div class="topo-vector-panel__head">
+            <span class="topo-vector-panel__title">Vetorização</span>
+            <button type="button" id="topo-vector-close" class="topo-vector-panel__close" aria-label="Fechar">&times;</button>
+          </div>
+          <p id="topo-vector-hint" class="topo-vector-panel__hint">x = longitude · y = latitude (graus decimais)</p>
+          <div class="topo-vector-panel__rows">
+            <div class="topo-vector-row">
+              <span class="topo-vector-row__label">d</span>
+              <input type="text" class="topo-vector-row__input" disabled placeholder="—" aria-label="Distância">
+            </div>
+            <div class="topo-vector-row">
+              <span class="topo-vector-row__label">a</span>
+              <input type="text" class="topo-vector-row__input" disabled placeholder="—" aria-label="Ângulo">
+            </div>
+            <div class="topo-vector-row">
+              <span class="topo-vector-row__label">x</span>
+              <input type="text" id="vec-x" class="topo-vector-row__input" placeholder="-50,950000" inputmode="decimal" aria-label="Longitude">
+              <button type="button" class="topo-vector-row__lock" data-lock="x" aria-label="Travar longitude" title="Travar">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+              </button>
+            </div>
+            <div class="topo-vector-row">
+              <span class="topo-vector-row__label">y</span>
+              <input type="text" id="vec-y" class="topo-vector-row__input" placeholder="-27,250000" inputmode="decimal" aria-label="Latitude">
+              <button type="button" class="topo-vector-row__lock" data-lock="y" aria-label="Travar latitude" title="Travar">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+              </button>
+            </div>
+            <div class="topo-vector-row">
+              <span class="topo-vector-row__label">z</span>
+              <input type="text" id="vec-z" class="topo-vector-row__input" placeholder="Cota (opcional)" inputmode="decimal" aria-label="Cota">
+            </div>
+            <div class="topo-vector-row">
+              <span class="topo-vector-row__label">m</span>
+              <input type="text" class="topo-vector-row__input" disabled placeholder="—" aria-label="Medida linear">
+            </div>
+          </div>
+          <button type="button" id="vec-add-point" class="topo-vector-panel__confirm">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+            Incluir ponto
+          </button>
+        </div>
+
+        <div id="contour-draw-bar" class="contour-draw-bar" hidden>
+          <span class="contour-draw-bar__title">Curvas de nível</span>
+          <div class="contour-draw-bar__modes" role="group" aria-label="Modo de geração">
+            <button type="button" id="contour-mode-points" class="contour-draw-bar__mode is-active">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="18" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="18" cy="14" r="2"/>
+                <path d="M8 16l3-6 4 2 3-4"/>
+              </svg>
+              Criar superfície
+            </button>
+            <button type="button" id="contour-mode-terrain" class="contour-draw-bar__mode">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <path d="M4 14c2-2 4-2 6 0s4 2 6 0"/><path d="M4 10c2-2 4-2 6 0s4 2 6 0"/>
+              </svg>
+              Terreno (estimado)
+            </button>
+          </div>
+          <label class="contour-draw-bar__interval">
+            <span>Equidistância (m)</span>
+            <input type="number" id="contour-interval" value="10" min="1" max="1000" step="1">
+          </label>
+          <label class="contour-draw-bar__interval contour-draw-bar__interval--smooth">
+            <span>Suavização</span>
+            <select id="contour-smoothing">
+              <option value="none">Nenhum</option>
+              <option value="low">Baixo</option>
+              <option value="medium" selected>Médio</option>
+              <option value="high">Alto</option>
+            </select>
+          </label>
+          <button type="button" id="contour-run" class="contour-draw-bar__run">Criar superfície</button>
+          <button type="button" id="contour-clear" class="contour-draw-bar__ghost">Limpar</button>
+          <p class="contour-draw-bar__hint" id="contour-bar-hint">Gere a superfície a partir dos pontos cotados inseridos no desenho. Polilinhas entram como linhas obrigatórias.</p>
+          <button type="button" id="contour-draw-close" class="contour-draw-bar__close" title="Fechar barra" aria-label="Fechar barra">&times;</button>
+        </div>
+
+        <div id="tool-hint" class="tool-hint" hidden></div>
+      </main>
+    </div>
+  </div>
+
+  <div id="point-attrs-modal" class="modal point-attrs-modal" hidden>
+    <div class="modal__panel point-attrs-modal__panel" role="dialog" aria-labelledby="point-attrs-title" aria-modal="true">
+      <div class="modal__header point-attrs-modal__header">
+        <h2 id="point-attrs-title" class="modal__title point-attrs-modal__title">Ponto — Atributos da feição</h2>
+        <button type="button" id="point-attrs-close" class="modal__close" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="point-attrs-form" class="point-attrs-form">
+        <div class="point-attrs-row">
+          <label for="point-attr-tipo" class="point-attrs-row__label">tipo</label>
+          <select id="point-attr-tipo" name="tipo" class="point-attrs-row__control"></select>
+        </div>
+        <div class="point-attrs-row">
+          <label for="point-attr-ordem" class="point-attrs-row__label">ordem</label>
+          <input type="number" id="point-attr-ordem" name="ordem" class="point-attrs-row__control" min="1" step="1" placeholder="NULL">
+        </div>
+        <div class="point-attrs-row">
+          <label for="point-attr-codigo" class="point-attrs-row__label">codigo</label>
+          <input type="text" id="point-attr-codigo" name="codigo" class="point-attrs-row__control" placeholder="NULL" autocomplete="off">
+        </div>
+        <div class="point-attrs-row">
+          <label for="point-attr-buffer" class="point-attrs-row__label">buffer</label>
+          <input type="text" id="point-attr-buffer" name="buffer" class="point-attrs-row__control" placeholder="Distância (m)" inputmode="decimal" autocomplete="off">
+        </div>
+        <div class="point-attrs-actions">
+          <button type="button" id="point-attrs-cancel" class="btn btn--ghost">Cancelar</button>
+          <button type="submit" class="btn btn--primary">OK</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="line-attrs-modal" class="modal line-attrs-modal" hidden>
+    <div class="modal__panel line-attrs-modal__panel" role="dialog" aria-labelledby="line-attrs-title" aria-modal="true">
+      <div class="modal__header line-attrs-modal__header">
+        <h2 id="line-attrs-title" class="modal__title line-attrs-modal__title">Linha — Atributos da feição</h2>
+        <button type="button" id="line-attrs-close" class="modal__close" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="line-attrs-form" class="line-attrs-form">
+        <div class="line-attrs-field">
+          <label for="line-attr-tipo" class="line-attrs-field__title">Tipo de linha</label>
+          <select id="line-attr-tipo" name="tipo" class="line-attrs-field__control"></select>
+        </div>
+        <div class="line-attrs-field">
+          <span class="line-attrs-field__title">Offset</span>
+          <input type="text" id="line-attr-offset" name="offset" class="line-attrs-field__control" placeholder="Distância (m)" inputmode="decimal" autocomplete="off">
+          <div class="line-attrs-offset-btns" role="group" aria-label="Lado do offset">
+            <button type="button" class="line-attrs-offset-btn" data-offset-side="left">Esquerda</button>
+            <button type="button" class="line-attrs-offset-btn" data-offset-side="right">Direita</button>
+            <button type="button" class="line-attrs-offset-btn" data-offset-side="both">Ambos</button>
+          </div>
+          <p class="line-attrs-hint">Cada offset vira uma polilinha paralela. "Ambos" = um de cada lado.</p>
+        </div>
+        <div class="line-attrs-field">
+          <label for="line-attr-buffer" class="line-attrs-field__title">Buffer</label>
+          <input type="text" id="line-attr-buffer" name="buffer" class="line-attrs-field__control" placeholder="Distância (m)" inputmode="decimal" autocomplete="off">
+          <p class="line-attrs-hint">Área em torno da linha com a distância informada.</p>
+        </div>
+        <div class="line-attrs-actions">
+          <button type="button" id="line-attrs-cancel" class="btn btn--ghost">Cancelar</button>
+          <button type="submit" class="btn btn--primary">OK</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="terrain-contour-modal" class="modal terrain-contour-modal" hidden>
+    <div class="modal__panel terrain-contour-modal__panel" role="dialog" aria-labelledby="terrain-contour-title" aria-modal="true">
+      <div class="modal__header terrain-contour-modal__header">
+        <h2 id="terrain-contour-title" class="modal__title">Superfície do terreno (estimada)</h2>
+        <button type="button" id="terrain-contour-close" class="modal__close" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="terrain-contour-modal__body">
+        <p class="terrain-contour-modal__intro">
+          Malha de elevação do modelo global SRTM (~30 m) dentro de um perímetro, gerando curvas de nível de estudo.
+          Precisão vertical típica ±5–9 m; em área de mata as cotas refletem o topo da vegetação. Não substitui levantamento topográfico.
+        </p>
+        <div class="terrain-contour-field">
+          <label for="terrain-contour-perimeter" class="terrain-contour-field__label">Perímetro</label>
+          <select id="terrain-contour-perimeter" class="terrain-contour-field__control">
+            <option value="">Escolha o perímetro…</option>
+          </select>
+          <p id="terrain-contour-perimeter-warn" class="terrain-contour-modal__warn" hidden>
+            Nenhum perímetro no serviço — desenhe a área abaixo (ou crie um perímetro no pilar Limites).
+          </p>
+        </div>
+        <div class="terrain-contour-or" aria-hidden="true"><span>ou</span></div>
+        <button type="button" id="terrain-contour-draw" class="terrain-contour-draw-btn">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20l4-9 5 3 6-8"/><circle cx="4" cy="20" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="11" r="1.5" fill="currentColor" stroke="none"/><circle cx="13" cy="14" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+          Desenhar a área no mapa
+        </button>
+        <p class="terrain-contour-modal__hint">
+          Clique os vértices no mapa e finalize com Enter — as curvas nascem dentro da área e o polígono é descartado.
+        </p>
+        <div class="terrain-contour-params">
+          <label class="terrain-contour-params__item">
+            <span class="terrain-contour-params__label">Malha (m)</span>
+            <input type="number" id="terrain-contour-grid" value="10" min="1" max="500" step="1">
+          </label>
+          <label class="terrain-contour-params__item">
+            <span class="terrain-contour-params__label">Curvas (m)</span>
+            <input type="number" id="terrain-contour-interval" value="1" min="0.1" max="100" step="0.1">
+          </label>
+          <label class="terrain-contour-params__item">
+            <span class="terrain-contour-params__label">Mestra (m)</span>
+            <input type="number" id="terrain-contour-master" value="5" min="1" max="1000" step="1">
+          </label>
+        </div>
+        <p class="terrain-contour-modal__note">
+          Curvas com equidistância menor que 5 m a partir de dado de ~30 m são interpolação, não detalhe real — 5 m é o honesto para estudo.
+        </p>
+        <div class="terrain-contour-modal__actions">
+          <button type="button" id="terrain-contour-cancel" class="btn btn--ghost">Cancelar</button>
+          <button type="button" id="terrain-contour-generate" class="btn btn--primary">Gerar curvas de estudo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="carimbo-config-modal" class="modal carimbo-config-modal" hidden>
+    <div class="modal__panel carimbo-config-modal__panel" role="dialog" aria-labelledby="carimbo-config-title" aria-modal="true">
+      <div class="modal__header carimbo-config-modal__header">
+        <h2 id="carimbo-config-title" class="modal__title">Configurações</h2>
+        <button type="button" id="carimbo-config-close" class="modal__close" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="carimbo-config-modal__body">
+        <div class="carimbo-config-tabs" role="tablist" aria-label="Configurações do carimbo">
+          <button type="button" class="carimbo-config-tabs__btn is-active" data-carimbo-tab="empresas" role="tab" aria-selected="true">Empresas</button>
+          <button type="button" class="carimbo-config-tabs__btn" data-carimbo-tab="responsaveis" role="tab" aria-selected="false">Responsáveis técnicos</button>
+          <button type="button" class="carimbo-config-tabs__btn" data-carimbo-tab="conta" role="tab" aria-selected="false">Conta</button>
+        </div>
+
+        <div id="carimbo-tab-empresas" class="carimbo-config-tab" role="tabpanel">
+          <p class="carimbo-config-tab__intro">
+            Empresas que saem no carimbo das plantas, na ODS e nos memoriais. A padrão é usada quando o serviço não escolhe outra.
+          </p>
+          <p id="carimbo-empresas-empty" class="carimbo-config-empty">Nenhuma empresa cadastrada.</p>
+          <div id="carimbo-empresas-list" class="carimbo-config-list" hidden></div>
+
+          <div class="carimbo-config-form">
+            <h3 id="carimbo-empresa-form-title" class="carimbo-config-form__title">Nova empresa</h3>
+            <label class="carimbo-config-field">
+              <span class="carimbo-config-field__label">Razão social *</span>
+              <input type="text" id="carimbo-empresa-razao" class="carimbo-config-field__input" placeholder="Razão social">
+            </label>
+            <div class="carimbo-config-row">
+              <label class="carimbo-config-field">
+                <span class="carimbo-config-field__label">CNPJ</span>
+                <input type="text" id="carimbo-empresa-cnpj" class="carimbo-config-field__input" placeholder="CNPJ">
+              </label>
+              <label class="carimbo-config-field">
+                <span class="carimbo-config-field__label">CREA</span>
+                <input type="text" id="carimbo-empresa-crea" class="carimbo-config-field__input" placeholder="CREA (ex: ES 48.636/D)">
+              </label>
+            </div>
+            <label class="carimbo-config-field">
+              <span class="carimbo-config-field__label">Endereço</span>
+              <input type="text" id="carimbo-empresa-endereco" class="carimbo-config-field__input" placeholder="Endereço">
+            </label>
+            <div class="carimbo-config-row carimbo-config-row--city">
+              <label class="carimbo-config-field">
+                <span class="carimbo-config-field__label">Cidade</span>
+                <input type="text" id="carimbo-empresa-cidade" class="carimbo-config-field__input" placeholder="Cidade">
+              </label>
+              <label class="carimbo-config-field">
+                <span class="carimbo-config-field__label">UF</span>
+                <input type="text" id="carimbo-empresa-uf" class="carimbo-config-field__input" placeholder="UF" maxlength="2">
+              </label>
+            </div>
+            <label class="carimbo-config-field">
+              <span class="carimbo-config-field__label">Telefone</span>
+              <input type="text" id="carimbo-empresa-telefone" class="carimbo-config-field__input" placeholder="Telefone">
+            </label>
+            <div class="carimbo-config-field">
+              <span class="carimbo-config-field__label">Logo (PNG/JPG/WebP, até 10MB)</span>
+              <label class="carimbo-config-file" id="carimbo-empresa-logo-label">
+                <input type="file" id="carimbo-empresa-logo" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" hidden>
+                <span class="carimbo-config-file__btn">Escolher arquivo</span>
+                <span id="carimbo-empresa-logo-name" class="carimbo-config-file__name">Nenhum arquivo escolhido</span>
+              </label>
+            </div>
+            <label class="carimbo-config-check">
+              <input type="checkbox" id="carimbo-empresa-padrao">
+              <span>Empresa padrão</span>
+            </label>
+            <button type="button" id="carimbo-empresa-submit" class="draw-tools-btn">Cadastrar empresa</button>
+          </div>
+        </div>
+
+        <div id="carimbo-tab-responsaveis" class="carimbo-config-tab" role="tabpanel" hidden>
+          <p class="carimbo-config-tab__intro">
+            Profissionais que assinam (aparecem no carimbo/memorial). O padrão é usado quando o serviço não escolhe outro.
+          </p>
+          <p id="carimbo-responsaveis-empty" class="carimbo-config-empty">Nenhum responsável técnico cadastrado.</p>
+          <div id="carimbo-responsaveis-list" class="carimbo-config-list" hidden></div>
+
+          <div class="carimbo-config-form">
+            <h3 id="carimbo-resp-form-title" class="carimbo-config-form__title">Novo responsável técnico</h3>
+            <label class="carimbo-config-field">
+              <span class="carimbo-config-field__label">Nome *</span>
+              <input type="text" id="carimbo-resp-nome" class="carimbo-config-field__input" placeholder="Nome">
+            </label>
+            <div class="carimbo-config-row carimbo-config-row--title">
+              <label class="carimbo-config-field">
+                <span class="carimbo-config-field__label">Título (ex: Eng. Agrimensor)</span>
+                <input type="text" id="carimbo-resp-titulo" class="carimbo-config-field__input" placeholder="Título (ex: Eng. Agrimensor)">
+              </label>
+              <label class="carimbo-config-field">
+                <span class="carimbo-config-field__label">CREA</span>
+                <input type="text" id="carimbo-resp-crea" class="carimbo-config-field__input" placeholder="CREA">
+              </label>
+            </div>
+            <label class="carimbo-config-field">
+              <span class="carimbo-config-field__label">Celular</span>
+              <input type="text" id="carimbo-resp-celular" class="carimbo-config-field__input" placeholder="Celular">
+            </label>
+            <label class="carimbo-config-field">
+              <span class="carimbo-config-field__label">Credenciamento INCRA (ex: NUVO)</span>
+              <input type="text" id="carimbo-resp-incra" class="carimbo-config-field__input" placeholder="Credenciamento INCRA (ex: NUVO)">
+            </label>
+            <p class="carimbo-config-field__hint">
+              Vira o prefixo dos vértices GeoIncra (ex: NUVO-M-0001) e acompanha o CREA no carimbo.
+            </p>
+            <label class="carimbo-config-check">
+              <input type="checkbox" id="carimbo-resp-padrao">
+              <span>Responsável padrão</span>
+            </label>
+            <button type="button" id="carimbo-resp-submit" class="draw-tools-btn">Cadastrar responsável</button>
+          </div>
+        </div>
+
+        <div id="carimbo-tab-conta" class="carimbo-config-tab" role="tabpanel" hidden>
+          <p class="carimbo-config-tab__intro">
+            Padrões da conta usados quando um serviço não seleciona empresa ou responsável técnico específicos.
+          </p>
+          <label class="entregas-field">
+            <span class="entregas-field__label">Empresa padrão da conta</span>
+            <select id="carimbo-conta-empresa" class="entregas-field__control" aria-label="Empresa padrão da conta">
+              <option value="">— Nenhuma —</option>
+            </select>
+          </label>
+          <label class="entregas-field">
+            <span class="entregas-field__label">Responsável técnico padrão</span>
+            <select id="carimbo-conta-responsavel" class="entregas-field__control" aria-label="Responsável técnico padrão">
+              <option value="">— Nenhum —</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="memorial-editor-modal" class="modal memorial-editor-modal" hidden>
+    <div class="modal__panel memorial-editor-modal__panel" role="dialog" aria-labelledby="memorial-editor-title" aria-modal="true">
+      <div class="modal__header memorial-editor-modal__header">
+        <div>
+          <h2 id="memorial-editor-title" class="modal__title">Memorial Descritivo</h2>
+          <p class="memorial-editor-modal__intro">
+            Edite o texto que aparece na planta. Vazio = usa o gerado automaticamente a partir dos vértices.
+          </p>
+        </div>
+        <button type="button" id="memorial-editor-close" class="modal__close" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="memorial-editor-modal__body">
+        <p id="memorial-editor-stats" class="memorial-editor-modal__stats">0 caracteres · 0 palavras</p>
+        <textarea id="memorial-editor-text" class="memorial-editor-modal__textarea" rows="14" spellcheck="false"></textarea>
+        <div class="memorial-editor-modal__actions">
+          <button type="button" id="memorial-editor-regen" class="memorial-editor-modal__regen">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+            Regerar do automático
+          </button>
+          <div class="memorial-editor-modal__actions-right">
+            <button type="button" id="memorial-editor-cancel" class="btn btn--ghost">Cancelar</button>
+            <button type="button" id="memorial-editor-apply" class="btn btn--primary">Aplicar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="notas-gerais-modal" class="modal notas-gerais-modal" hidden>
+    <div class="modal__panel notas-gerais-modal__panel" role="dialog" aria-labelledby="notas-gerais-title" aria-modal="true">
+      <div class="modal__header notas-gerais-modal__header">
+        <div>
+          <h2 id="notas-gerais-title" class="modal__title">Notas Gerais</h2>
+          <p class="notas-gerais-modal__intro">
+            Adicione, edite ou remova as notas que aparecem no quadro &ldquo;Notas Gerais&rdquo; da prancha.
+          </p>
+        </div>
+        <button type="button" id="notas-gerais-close" class="modal__close" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="notas-gerais-modal__body">
+        <div id="notas-gerais-list" class="notas-gerais-list"></div>
+        <button type="button" id="notas-gerais-add" class="notas-gerais-add">+ Adicionar nota</button>
+        <div class="notas-gerais-modal__actions">
+          <button type="button" id="notas-gerais-restore" class="notas-gerais-modal__restore">Restaurar padrão</button>
+          <div class="notas-gerais-modal__actions-right">
+            <button type="button" id="notas-gerais-cancel" class="btn btn--ghost">Cancelar</button>
+            <button type="button" id="notas-gerais-apply" class="btn btn--primary">Aplicar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
+  <script src="js/store.js?v=8"></script>
+  <script src="js/crs.js?v=2"></script>
+  <script src="js/tools.js?v=2"></script>
+  <script src="js/draw-tools.js?v=16"></script>
+  <script src="js/point-attrs.js?v=4"></script>
+  <script src="js/line-attrs.js?v=3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-delaunay@6"></script>
+  <script src="js/contour-tool.js?v=11"></script>
+  <script src="js/map-layers.js?v=1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/shpjs@6.2.0/dist/shp.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
+  <script src="js/perimeter-import.js?v=2"></script>
+  <script src="js/memorial-tool.js?v=3"></script>
+  <script src="js/servico-map.js?v=16"></script>
+  <script src="js/servico.js?v=26"></script>
+  <script>
+    document.getElementById("btn-logout").addEventListener("click", function () {
+      VTAuth.logout();
+    });
+  </script>
+</body>
+</html>
